@@ -1,14 +1,21 @@
+
+
+BUILD_DIR = build/
+
 MCU = atmega328p
 FORMAT = ihex
-TARGET = HelloWorld
+TARGET = main
+BUILD_TARGET = $(BUILD_DIR)$(TARGET)
 SRC = $(TARGET).c 
-OBJ = $(SRC:.c=.o)
+OBJ = $(BUILD_DIR)$(SRC:.c=.o)
+
+.DEFAULT_GOAL := $(BUILD_TARGET).hex
 
 AVRDUDE = avrdude
 AVRDUDE_PROGRAMMER = arduino
 AVRDUDE_PORT = /dev/ttyUSB0
 
-AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex:i
+AVRDUDE_WRITE_FLASH = -U flash:w:$(BUILD_TARGET).hex:i
 
 AVRDUDE_FLAGS = -F -V -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER) -b 57600
 
@@ -20,20 +27,23 @@ OBJCOPY = avr-objcopy
 REMOVE = rm -f
 
 AVR-GCC_FLAGS = -Os -DF_CPU=$(AVR-GCC_CLK_SPEED) -mmcu=$(MCU)
-AVR_GCC_EXEC_FLAGS = -mmcu=$(MCU) $(TARGET).o 
-AVR_GCC_EXEC_TARGET = -o $(TARGET)
+AVR_GCC_EXEC_FLAGS = -mmcu=$(MCU) $(BUILD_TARGET).o 
+AVR_GCC_EXEC_TARGET = -o $(BUILD_TARGET)
 
-%.o : %.c
+$(BUILD_DIR)%.o : %.c
 	$(CC) $(AVR-GCC_FLAGS) -c $< -o $@
 
-$(TARGET): $(TARGET).o
+$(BUILD_TARGET) : $(BUILD_TARGET).o
 	$(CC) $(AVR_GCC_EXEC_FLAGS) $(AVR_GCC_EXEC_TARGET)
+	echo $(BUILD_TARGET)
 
-$(TARGET).hex: $(TARGET)
-	$(OBJCOPY) -O $(FORMAT) -R .eeprom $(TARGET) $(TARGET).hex
+$(BUILD_TARGET).hex : $(BUILD_TARGET)
+	$(OBJCOPY) -O $(FORMAT) -R .eeprom $(BUILD_TARGET) $(BUILD_TARGET).hex
+
+all: $(BUILD_TARGET).hex
 
 clean:
-	$(REMOVE) $(TARGET) $(TARGET).hex $(OBJ)
+	$(REMOVE) $(BUILD_DIR)*
 
-load: $(TARGET).hex
+load: $(BUILD_TARGET).hex
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) 
