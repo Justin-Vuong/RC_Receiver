@@ -1,5 +1,3 @@
-
-
 BUILD_DIR = build/
 
 MCU = atmega328p
