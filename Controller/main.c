@@ -28,8 +28,12 @@ void ADC_setup(){
 
 int main(void)
 {
+	DDRC = (1 << PORTC0) | (1 << PORTC1) | (1 << PORTC2) | (1 << PORTC3);
+	DDRB = (1 << PORTB0) | (1 << PORTB1) | (1 << PORTB2) | (1 << PORTB3);
+	PORTC = (1 << PORTC0) | (1 << PORTC2);
+	PORTB = (1 << PORTB0) | (1 << PORTB2);
 
-	DDRD = (1 << PORTD5) | (1 << PORTD6);			//Setting pin D6 as output
+	DDRD |= (1 << PORTD5) | (1 << PORTD6);			//Setting pin D6 as output
 	TCCR0A = (1 << COM0A1) | (1 << COM0B1);			//Setting timer to clear OC0A and OC0B pin on compare match and set pin after overflow
 	TCCR0A |= (1 << WGM00) | (1 << WGM01);	 		//Set Fast PWM with timer overflow at 0xFF
 	TIMSK0 = (1 << TOIE0);					//Trigger interrupt upon timer overflow
