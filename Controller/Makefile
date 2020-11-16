@@ -4,7 +4,7 @@ FORMAT = ihex
 CLK_SPEED = 16000000UL
 TARGET = main
 BUILD_TARGET = $(BUILD_DIR)$(TARGET)
-SRC = serialPort.c spi.c $(TARGET).c
+SRC = serialPort.c spi.c $(TARGET).c nRFL01.c
 OBJ = $(SRC:%.c=build/%.o)
 
 .DEFAULT_GOAL := $(BUILD_TARGET).hex

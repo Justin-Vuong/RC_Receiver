@@ -1,0 +1,88 @@
+Interrupts when
+1-Rx Received a packet
+2-TX sent a packet successfully
+3-TX failed to send a packet (must unset bit to continue)
+
+Enhanced ShockBurst
+-Used for automatic packet handling and timing
+	-Searches for packets, validates CRC, then moves payload to RX FIFO upon success
+
+Packet Format
+-Preamble (1 Byte) set of alternating bits (pattern depends on first bit of address such that it alternates) used to signify that there is data coming.
+-Address (3-5 Bytes)
+-Packet Control Field (9 bit) 
+	-Payload length in bytes (6 bits), 
+	-Packet identity used to signify if packet received is new or retransmitted so that same data is not sent to MCU twice (2 bit),
+	-NO_ACK flag (1 bit)
+-Payload (0-32 Bytes)
+
+
+CRC (Cyclic Redundancy Check)
+-Similar to a checksum which is used to validate packets that are received
+	-Advantage over Checksum is that its easier to find where in the data there was corruption
+-Appends all data together then divides and uses remainder to create a polynomial
+-1 byte CRC uses an 8th degree polynomial. 2 Byte uses 16 degree polynomial.
+
+TODO
+Interrupts in status register
+Read count loss packets register (OBSERVE_TX add 0x08)
+Read from FIFO_STATUS register on tx
+
+
+CONFIGURATION
+All interrupts enabled
+2 byte CRC
+3 byte address
+Wait 250 us before retransmission of packets
+3 retransmission attempts
+Operates on frequency channel 2
+Output power 0dBm
+Read/Writes happen to the MSBit of LSByte. Can terminate read/write before accessing entire register
+Dynamic Payload length enabled
+
+----------------------------------------------------
+
+Rx Setup
+Send ACTIVATE command through SPI (01010000 0x73)
+Enable Auto_ACK and dynamic payload length
+1D -> 110
+Setup Register
+00 -> 00001111
+Set Address length to 3 bytes
+03 -> 0x1
+Set RX_ADDR_P0
+0A -> 0x787878
+Enable Dynamic payload length
+1C -> 0x1
+Send FLUSH_RX
+Set CE high (wait 130 us)
+
+When IRQ pin is high
+Send command R_RX_PL_WID (0110 0000) to get size of payload
+Read from RX_FIFO
+Set RX_DR in status to low
+Send R_RX_PL_WID command to read length of payload
+
+-----------------------------------------------------
+
+Tx Setup
+Send ACTIVATE command through SPI 
+01010000 0x73
+Enable Auto_ACK and dynamic payload length
+1D -> 110
+Setup Register
+00 -> 00001110
+Set Address length to 3 bytes
+03 -> 01
+Set RX_ADDR_P0
+0A -> 0x787878
+Set TX_ADDR same as RX_ADDR_P0
+10 -> 0x787878
+Send FLUSH_TX
+Set CE high (wait 10 us)
+
+WHEN THERE IS DATA
+Write payload
+
+Check for TX_DS in status reg (success)
+Check for MAX_RT in status reg (fail. Must reset MAX_RT in status reg)

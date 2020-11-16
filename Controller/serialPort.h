@@ -3,6 +3,8 @@
 
 void USART0Init(void);
 void USART0SendByte(uint8_t u8Data);
-uint8_t USART0ReceiveByte();
+void USART0Send(uint8_t* u8Data, int size);
+void USART0Read(uint8_t* u8Data, int size);
+uint8_t USART0ReadByte();
 
 #endif
