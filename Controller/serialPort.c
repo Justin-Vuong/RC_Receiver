@@ -21,10 +21,10 @@ void USART0Send(uint8_t* u8Data, int size)
 {
     for (int a = 0; a < size; a++)
     {
-    //wait while previous byte is completed
-    while(!(UCSR0A&(1<<UDRE0))){};
-    // Transmit data
-    UDR0 = u8Data[a];
+        //wait while previous byte is completed
+        while(!(UCSR0A&(1<<UDRE0))){};
+        // Transmit data
+        UDR0 = u8Data[a];
     }
 }
 
@@ -32,10 +32,10 @@ void USART0Read(uint8_t* buff, int size)
 {
     for (int a = 0; a < size; a++)
     {
-    //wait while previous byte is completed
-    while(!(UCSR0A&(1<<UDRE0))){};
-    // Transmit data
-    buff[a] = UDR0;
+        //wait while previous byte is completed
+        while(!(UCSR0A&(1<<UDRE0))){};
+        // Transmit data
+        buff[a] = UDR0;
     }
 }
 

@@ -1,3 +1,17 @@
+Pin Configuration 
+
+Transceiver pins            atmega328p pins
+    CE              -->         D9         
+    CSN             -->         D3
+    SCK             -->         D13
+    MOSI            -->         D11
+    MISO            -->         D12
+    IRQ             -->         D2
+
+Pull down resistor on D2
+
+------------------------------------------------------------
+
 Interrupts when
 1-Rx Received a packet
 2-TX sent a packet successfully
