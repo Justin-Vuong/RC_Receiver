@@ -1,12 +1,12 @@
 Pin Configuration 
 
-Transceiver pins            atmega328p pins
-    CE              -->         D9         
-    CSN             -->         D3
-    SCK             -->         D13
-    MOSI            -->         D11
-    MISO            -->         D12
-    IRQ             -->         D2
+nRFL01+ pins            ATmega328p pins
+    CE          -->         D9         
+    CSN         -->         D10
+    SCK         -->         D13
+    MOSI        -->         D11
+    MISO        -->         D12
+    IRQ         -->         D2
 
 Pull down resistor on D2
 
@@ -63,7 +63,7 @@ Enable Auto_ACK and dynamic payload length
 Setup Register
 00 -> 00001111
 Set Address length to 3 bytes
-03 -> 0x1
+03 -> 1
 Set RX_ADDR_P0
 0A -> 0x787878
 Enable Dynamic payload length
@@ -87,7 +87,7 @@ Enable Auto_ACK and dynamic payload length
 Setup Register
 00 -> 00001110
 Set Address length to 3 bytes
-03 -> 01
+03 -> 1
 Set RX_ADDR_P0
 0A -> 0x787878
 Set TX_ADDR same as RX_ADDR_P0
