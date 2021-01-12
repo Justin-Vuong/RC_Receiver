@@ -47,8 +47,6 @@ int main (void)
     DDRB |= (1 << CE) | (1 << CS) | (1 << MOSI) | (1 <<  SCK);
 
     SPI_init_master();
-
-    uint8_t chk[]= {0,0};
     
     nRFL01_TX_Init();
     
