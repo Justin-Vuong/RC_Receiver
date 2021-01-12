@@ -1,3 +1,5 @@
+WORKS ON 2640MHz
+
 Pin Configuration 
 
 nRFL01+ pins            ATmega328p pins
@@ -60,14 +62,12 @@ Rx Setup
 Send ACTIVATE command through SPI (01010000 0x73)
 Enable Auto_ACK and dynamic payload length
 1D -> 110
-Setup Register
+Config Register
 00 -> 00001111
 Set Address length to 3 bytes
 03 -> 1
-Set RX_ADDR_P0
-0A -> 0x787878
-Enable Dynamic payload length
-1C -> 0x1
+Set RX_ADDR_P5
+0F -> 0x787878
 Send FLUSH_RX
 Set CE high (wait 130 us)
 

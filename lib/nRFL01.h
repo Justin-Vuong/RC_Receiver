@@ -9,8 +9,9 @@ void nRFL01_Write_Regs(uint8_t addr, uint8_t* values, int size);
 void nRFL01_TX_Init(void);
 void nRFL01_Write_Tx_Payload(uint8_t* values, int size);
 void nRFL01_RX_Init(void);
-void nRFL01_RX_Read_Payload(uint8_t* data, int dataSz);
+void nRFL01_RX_Read_Payload(unsigned char* data, uint8_t dataSz);
 void nRFL01_heartbeat(uint8_t* data);
 uint8_t nRFL01_check_registers(uint8_t* data, bool isRX);
+void nRFL01_clear_max_retries(void);
 
 #endif

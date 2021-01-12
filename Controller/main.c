@@ -1,3 +1,4 @@
+//Code meant for controller
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -14,44 +15,66 @@
 //Used to debounce input signal from antenna
 uint8_t ISR_Running = 0;
 
-int main (void)
+uint8_t joyX = 0;
+uint8_t joyY = 0;
 
+void send_update(uint8_t X, uint8_t Y)
 {
-    //Initialize USART0 serial port for debugging
+    uint8_t message[6] = {'X',':',X,'Y',':',Y};
+    USART0Send(message,6);
+}
+
+void start_conversion(){
+
+	ADCSRA |= (1 << ADSC); 		//Start a read on the ADC
+
+}
+
+void ADC_setup(){
+	//Using a 10 bit ADC
+	//Use external voltage as reference, use ADC5, left adjust register to read only 8 MSB
+	ADMUX = (1 << REFS0) | (1 << ADLAR) | (1 << MUX0) | (1 << MUX2);
+	//Enable ADC, Enable interrupts, set prescalar
+	ADCSRA = (1 << ADEN) | (1 << ADIE) | (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2); 	
+	//Disable digital input buffer to avoid reading wrong value
+	DIDR0 |=  (1 << ADC4D) | (1 << ADC5D);  
+	start_conversion();
+}
+
+int main (void)
+{
     USART0Init();
+	ADC_setup();
 
-    //Chip enable to 1   
-    DDRB = (1 << CE) | (1 << CS) | (1 << MOSI) | (1 <<  SCK);
-
-    SPI_init_master();
-
-    nRFL01_TX_Init();
-
-    //Init Software interrupt
-    sei();
-    
-    //Set pin INT0
-    EIMSK = (1 << INT0);
-
-    //Trigger interrupt on rising edge of pin INT0
-    EICRA = (1 << ISC00) | (1 << ISC01);
-
+	//Enable external interrupts
+	sei();
 
     while (1)
     {
-
+        _delay_ms(1000);
+        start_conversion();
     }
 }
 
-//Software interrupt for transceiver when it receives or transmits data
-ISR(INT0_vect)
+ISR(ADC_vect)
 {
-    if (!ISR_Running)
-    {
-        ISR_Running = 1;
-        count +=1;
-    
-        USART0SendByte(count);
-        ISR_Running = 0;
-    }
+	
+	if ((ADMUX & 0b1111) == 0b0100) {
+		//ADC 4 selected (X dir)
+		//Subtract 127 so that reading is centered around 0 (-127 to 128)
+		joyX = ADCH;
+        
+		//Set the interrupt to read from ADC5 next time
+		ADMUX |= 0b00000001; 
+	} else {
+		
+		//ADC 5 selected (Y dir)
+		//The joystick's control of the PWM must be mirror around the center 
+		//as the direction of the wheels is controlled by setting pins. 
+        joyY = ADCH;
+
+        send_update(joyX, joyY);
+		
+		ADMUX &= 0b11111110; //Set the interrupt to read from ADC4 next time
+	}
 }

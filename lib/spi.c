@@ -11,13 +11,13 @@
 //Initialize SPI Master Device
 void SPI_init_master(void)
 {
-    DDRB = (1 << CS) | (1 << MOSI) | (1 << SCK); //Set MOSI, SCK as Output
+    DDRB |= (1 << CS) | (1 << MOSI) | (1 << SCK); //Set MOSI, SCK as Output
     SPCR = (1 << SPE) | (1 << MSTR);             //Enable SPI, Set as Master
 }
 
 void SPI_init_slave(void)
 {
-    DDRB = (1 << MISO); //MISO as OUTPUT
+    DDRB |= (1 << MISO); //MISO as OUTPUT
     SPCR = (1 << SPE);  //Enable SPI
 }
 
