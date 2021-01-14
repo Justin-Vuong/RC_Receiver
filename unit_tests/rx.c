@@ -90,6 +90,8 @@ int main (void)
 
         if (heart[0] == 0x42 && heart[1] == 0x0F) 
         {
+            //Data Received
+            USART0SendByte('F');
 
         }
         else if(!(fifo_status & 0x01))

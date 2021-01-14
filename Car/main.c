@@ -7,6 +7,28 @@ https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcont
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <stdlib.h> 
+#include "serialPort.h"
+#include "nRFL01.h"
+#include "spi.h"
+
+//Pins for transceiver on ATmega328p
+#define CE          PINB1
+#define CS          PINB2
+#define MOSI        PINB3
+#define MISO        PINB4
+#define SCK         PINB5
+
+//SPI commands for transceiver
+#define R_REGISTER(ADDR)        (0x00 | ADDR)
+#define W_REGISTER(ADDR)        (0x20 | ADDR)
+#define R_RX_PAYLOAD            0x61
+#define W_TX_PAYLOAD            0xA0
+#define FLUSH_TX                0xE1
+#define FLUSH_RX                0xE2
+#define REUSE_TX_PL             0xE3
+#define R_RX_PL_WID             0x60
+#define NOP                     0xFF 
 
 //Holds a value from 0-255 which is set by the ADC
 double dutyCycleLeftWheels = 0;
@@ -16,6 +38,16 @@ double steer = 0;
 //To maintain control of car when the controller disconnects, if there are no new commands 
 //within a second the motors will be turned off (note 1 sec = 100 overflows of counter)
 int count = 0;
+
+//Used to debounce input signal from antenna
+uint8_t 	    ISR_Running = 0;
+
+//Variable used to store the incoming payload
+unsigned char   recv_Message[] = {'F', 'I', 'L', 'L', 'E', 'R'};
+
+uint8_t         fifo_status = 0;
+uint8_t         isDone = 0;
+uint8_t         heartbeat[] = {5,5};
 
 void updateMotorPWM(int X, int Y)
 {
@@ -93,10 +125,17 @@ int parsePayload(uint8_t* payload, int payloadSize)
 
 int main(void)
 {
-	DDRC = (1 << PORTC0) | (1 << PORTC1) | (1 << PORTC2) | (1 << PORTC3);
-	DDRB = (1 << PORTB0) | (1 << PORTB1) | (1 << PORTB2) | (1 << PORTB3);
-	PORTC = (1 << PORTC0) | (1 << PORTC2);
-	PORTB = (1 << PORTB0) | (1 << PORTB2);
+	//Initialize USART0 serial port for debugging
+    USART0Init();
+
+	//Initialize pins used for motors
+	DDRC |= (1 << PORTC0) | (1 << PORTC1) | (1 << PORTC2) | (1 << PORTC3);
+	DDRB |= (1 << PORTB0) | (1 << PORTB1) | (1 << PORTB2) | (1 << PORTB3);
+	PORTC |= (1 << PORTC0) | (1 << PORTC2);
+	PORTB |= (1 << PORTB0) | (1 << PORTB2);
+
+	//Initialize pins used for tranceiver
+	DDRB |= (1 << CE) | (1 << CS) | (1 << MOSI) | (1 <<  SCK);
 
 	//Setting pin D6 as output
 	DDRD |= (1 << PORTD5) | (1 << PORTD6);
@@ -107,24 +146,45 @@ int main(void)
 	//Trigger interrupt upon timer overflow
 	TIMSK0 = (1 << TOIE0);
 
+	SPI_init_master();
+
+    nRFL01_RX_Init();
+
+	//Verify registers were initialized with the correct values
+    uint8_t ret = 0;
+    uint8_t regValues[22];
+
+    if((ret = nRFL01_check_registers(regValues, 1)) != 0 )
+    {
+        USART0SendByte('E');
+        USART0SendByte(ret);
+
+        for(int a = 0; a < 22; a++)
+        {
+            USART0SendByte(regValues[a]);
+        }
+        return 0;
+    }
+
 	//Enable external interrupts
 	sei();
 
-	//Setting prescalar to 1024. Setting this bit starts the timer
+	//Setting timer prescalar to 1024. Setting this bit starts the timer
 	TCCR0B = (1 << CS00) | (1 << CS02);
 
-	uint8_t message1[6] = {'X',':',100,'Y',':',250};
-	uint8_t message2[6] = {'X',':',150,'Y',':',150};
-	uint8_t message3[6] = {'X',':',250,'Y',':',0};
-	
+    //Set pin INT0 which is used for transceiver IRQ
+    EIMSK = (1 << INT0);
+
+    //Trigger interrupt on falling edge of pin INT0 which is used for IRQ on transceiver
+    EICRA = (1 << ISC01);
+
+	USART0SendByte('S');
 	while (1)
 	{
-		parsePayload(message1,6);
-		_delay_ms(2500);
-		parsePayload(message2,6);
-		_delay_ms(2500);
-		parsePayload(message3,6);
-		_delay_ms(2500);
+		nRFL01_heartbeat(heartbeat);
+		USART0SendByte('H');
+		USART0Send(heartbeat, 2);
+		_delay_ms(1000);
 	}
 
 	return 0;
@@ -142,4 +202,39 @@ ISR(TIMER0_OVF_vect){
 	//Set compare registers values
 	OCR0A = dutyCycleRightWheels; 
 	OCR0B = dutyCycleLeftWheels;
+}
+
+//Software interrupt for transceiver when it receives data
+ISR(INT0_vect)
+{
+    if (!ISR_Running)
+    {
+        ISR_Running = 1;
+        USART0SendByte('I');
+
+        isDone = 0;
+        while (isDone == 0)
+        {
+            //Read from FIFO, data is ready    
+            nRFL01_RX_Read_Payload(recv_Message, 6);
+            USART0SendByte('R');
+            USART0Send(recv_Message, 6);
+			parsePayload(recv_Message, 6);
+
+            //Read from the FIFO_STATUS register to see if there are any other packets in RX FIFO
+            PORTB &= ~(1 << CS);
+            SPI_Send(0x17);
+            fifo_status = SPI_Read();
+            PORTB |= (1 << CS);
+
+            USART0SendByte('F');
+            USART0SendByte(fifo_status);
+
+            if((fifo_status & 0x01) == 0x01)
+            {
+                isDone = 1;
+            }
+        }
+        ISR_Running = 0;
+    }
 }
